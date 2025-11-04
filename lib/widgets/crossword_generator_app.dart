@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers.dart';
+import 'crossword_info_widget.dart';
 import 'crossword_widget.dart';
 
 class CrosswordGeneratorApp extends StatelessWidget {
@@ -18,9 +19,16 @@ class CrosswordGeneratorApp extends StatelessWidget {
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
-          title: Text('Crossword Generator'),
+          title: Text('Generando Crucigrama'),
         ),
-        body: SafeArea(child: CrosswordWidget()),
+        body: SafeArea(
+          child: Column(
+            children: [
+              const CrosswordInfoWidget(),
+              Expanded(child: CrosswordWidget()),
+            ],
+          ),
+        ),
       ),
     );
   }

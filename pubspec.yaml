@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  audioplayers: ^6.1.0
   built_collection: ^5.1.1
   built_value: ^8.10.1
   characters: ^1.4.0
@@ -25,10 +26,28 @@ dev_dependencies:
   build_runner: ^2.5.4
   built_value_generator: ^8.10.1
   custom_lint: ^0.7.6
+  flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.1
   riverpod_generator: ^2.6.5
   riverpod_lint: ^2.6.5
 
 flutter:
   uses-material-design: true
-  assets:                                       # Add this line
-    - assets/words.txt                          # And this one.                       # And this one.
+  assets:
+    - assets/words.txt
+    - assets/audio/
+    - assets/images/
+
+# Configuración para el icono de la app
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/app_icon.png"
+  min_sdk_android: 21
+
+# Configuración para el splash screen
+flutter_native_splash:
+  color: "#42A5F5"
+  image: assets/images/splash_image.png
+  android: true
+  ios: true
