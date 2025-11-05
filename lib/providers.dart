@@ -9,17 +9,45 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'isolates.dart';
 import 'model.dart' as model;
+import 'supabase_service.dart';
 
 part 'providers.g.dart';
 
-const backgroundWorkerCount = 4;                           // Add this line
+// OPTIMIZACIÓN: Reducir workers para mejor rendimiento en móviles
+const backgroundWorkerCount = 2; // Reducido de 4 para móviles
+
+/// Provider for exclusive words from Supabase (only when online)
+@riverpod
+Future<List<String>> exclusiveWords(Ref ref) async {
+  try {
+    final exclusiveWords = await SupabaseService.instance.getPalabrasExclusivas();
+    if (exclusiveWords.isNotEmpty) {
+      debugPrint('Loaded ${exclusiveWords.length} exclusive words from Supabase - ONLINE MODE');
+    } else {
+      debugPrint('No exclusive words loaded - OFFLINE MODE');
+    }
+    return exclusiveWords;
+  } catch (e) {
+    debugPrint('Error loading exclusive words (OFFLINE): $e');
+    return []; // Return empty list if offline or error
+  }
+}
+
+/// Provider to track if we have internet connection (based on exclusive words)
+@riverpod
+Future<bool> hasInternetConnection(Ref ref) async {
+  final exclusiveWords = await ref.watch(exclusiveWordsProvider.future);
+  return exclusiveWords.isNotEmpty;
+}
 
 /// A provider for the wordlist to use when generating the crossword.
 @riverpod
 Future<BuiltSet<String>> wordList(Ref ref) async {
   final re = RegExp(r'^[a-z]+$');
   final words = await rootBundle.loadString('assets/words.txt');
-  return const LineSplitter()
+  final exclusiveWordsAsync = await ref.watch(exclusiveWordsProvider.future);
+  
+  final baseWords = const LineSplitter()
       .convert(words)
       .toBuiltSet()
       .rebuild(
@@ -28,14 +56,23 @@ Future<BuiltSet<String>> wordList(Ref ref) async {
           ..where((word) => word.length > 2)
           ..where((word) => re.hasMatch(word)),
       );
+  
+  // Only add exclusive words if we have internet connection
+  if (exclusiveWordsAsync.isNotEmpty) {
+    debugPrint('Adding ${exclusiveWordsAsync.length} exclusive words to crossword (ONLINE)');
+    return baseWords.rebuild((b) => b.addAll(exclusiveWordsAsync.map((word) => word.toLowerCase())));
+  } else {
+    debugPrint('Generating crossword without exclusive words (OFFLINE)');
+    return baseWords;
+  }
 }
 
 enum CrosswordSize {
   small(width: 20, height: 11),
-  medium(width: 40, height: 22),
-  large(width: 80, height: 44),
-  xlarge(width: 160, height: 88),
-  xxlarge(width: 500, height: 500);
+  medium(width: 30, height: 17),  // OPTIMIZACIÓN: Reducido para móviles (antes 40x22)
+  large(width: 50, height: 28),   // OPTIMIZACIÓN: Reducido para móviles (antes 80x44)
+  xlarge(width: 80, height: 44),  // OPTIMIZACIÓN: Reducido para móviles (antes 160x88)
+  xxlarge(width: 120, height: 66); // OPTIMIZACIÓN: Reducido para móviles (antes 500x500)
 
   const CrosswordSize({required this.width, required this.height});
 

@@ -91,37 +91,41 @@ Future<WorkQueue> _generate((WorkQueue, int) workMessage) async {
     return (location, direction, candidateWords.randomElement());
   }
 
-  // Filter down the candidate word list to those that contain the letter
-  // at the current location
-  final words = candidateWords.toBuiltList().rebuild(
-    (b) => b
-      ..where((b) => b.characters.contains(target.character))
-      ..shuffle(),
-  );
+  // OPTIMIZACIÓN: Crear lista una sola vez y limitar intentos
+  final targetChar = target.character;
+  final wordsList = candidateWords.where((word) => word.contains(targetChar)).toList()..shuffle();
+  
+  // OPTIMIZACIÓN: Reducir límites para mejor rendimiento en móviles
+  const maxTries = 500; // Reducido de 1000
+  const maxDuration = Duration(seconds: 5); // Reducido de 10
+  
   int tryCount = 0;
   final start = DateTime.now();
-  for (final word in words) {
+  
+  for (final word in wordsList) {
+    if (tryCount >= maxTries || DateTime.now().difference(start) > maxDuration) {
+      return (location, direction, null);
+    }
+    
     tryCount++;
-    for (final (index, character) in word.characters.indexed) {
-      if (character != target.character) continue;
+    final wordChars = word.characters;
+    
+    for (int index = 0; index < wordChars.length; index++) {
+      if (wordChars.elementAt(index) != targetChar) continue;
+
+      final newLocation = switch (direction) {
+        Direction.across => location.leftOffset(index),
+        Direction.down => location.upOffset(index),
+      };
 
       final candidate = crossword.addWord(
-        location: switch (direction) {
-          Direction.across => location.leftOffset(index),
-          Direction.down => location.upOffset(index),
-        },
+        location: newLocation,
         word: word,
         direction: direction,
       );
+      
       if (candidate != null) {
-        return switch (direction) {
-          Direction.across => (location.leftOffset(index), direction, word),
-          Direction.down => (location.upOffset(index), direction, word),
-        };
-      }
-      final deltaTime = DateTime.now().difference(start);
-      if (tryCount >= 1000 || deltaTime > Duration(seconds: 10)) {
-        return (location, direction, null);
+        return (newLocation, direction, word);
       }
     }
   }
