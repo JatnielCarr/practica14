@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Servicio para manejar la integración con Supabase
@@ -15,12 +16,14 @@ class SupabaseService {
       final response = await _supabase
           .from('palabras_exclusivas')
           .select('palabra');
-
+      
       return (response as List)
-          .map((item) => (item['palabra'] as String).toLowerCase())
+          .where((item) => item != null && item['palabra'] != null)
+          .map((item) => (item['palabra'] as String).toLowerCase().trim())
+          .where((word) => word.isNotEmpty)
           .toList();
     } catch (e) {
-      print('Error al obtener palabras exclusivas: $e');
+      debugPrint('Error al obtener palabras exclusivas: $e');
       return [];
     }
   }
@@ -48,7 +51,7 @@ class SupabaseService {
 
       return newUser['id'] as String;
     } catch (e) {
-      print('Error en login/registro: $e');
+      debugPrint('Error en login/registro: $e');
       return null;
     }
   }
@@ -62,7 +65,7 @@ class SupabaseService {
         'fecha_completado': DateTime.now().toIso8601String(),
       });
     } catch (e) {
-      print('Error al registrar tiempo: $e');
+      debugPrint('Error al registrar tiempo: $e');
     }
   }
 
@@ -84,7 +87,7 @@ class SupabaseService {
         };
       }).toList();
     } catch (e) {
-      print('Error al obtener ranking: $e');
+      debugPrint('Error al obtener ranking: $e');
       return [];
     }
   }

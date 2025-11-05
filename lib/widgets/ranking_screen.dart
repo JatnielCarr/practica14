@@ -136,7 +136,7 @@ class RankingScreen extends StatelessWidget {
     if (minutes > 0) {
       return '${minutes}m ${seconds}s';
     } else if (seconds > 0) {
-      return '${seconds}.${(milliseconds / 100).floor()}s';
+      return '$seconds.${(milliseconds / 100).floor()}s';
     } else {
       return '${milliseconds}ms';
     }

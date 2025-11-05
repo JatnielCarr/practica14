@@ -181,11 +181,15 @@ class _CrosswordPuzzleWidgetState extends ConsumerState<CrosswordPuzzleWidget> {
         actions: [
           ElevatedButton(
             onPressed: () async {
+              // Guardar context antes de async
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              
               // Register time in ranking
               await SupabaseService.instance.registrarTiempo(userId!, milisegundos);
               if (mounted) {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
+                navigator.pop();
+                messenger.showSnackBar(
                   const SnackBar(content: Text('¡Tiempo registrado en el ranking!')),
                 );
                 // Show ranking
@@ -414,171 +418,201 @@ class _CrosswordPuzzleWidgetState extends ConsumerState<CrosswordPuzzleWidget> {
   ) {
     final puzzle = ref.read(puzzleProvider);
 
-    // Find all possible words that can be placed at this location
-    final possibleWords = <String>{};
-
-    // Find the start location of the word at this position
+    // En un crucigrama REAL, no mostramos opciones.
+    // El usuario debe ADIVINAR la palabra.
+    
+    // Determinar las palabras en ambas direcciones si existen
+    final character = puzzle.crossword.characters[location];
+    
     model.Location? acrossStartLocation;
     model.Location? downStartLocation;
-
-    // Check if this location has an across word
-    final character = puzzle.crossword.characters[location];
+    int? acrossLength;
+    int? downLength;
+    
     if (character?.acrossWord != null) {
       acrossStartLocation = character!.acrossWord!.location;
-    }
-
-    // Check if this location has a down word
-    if (character?.downWord != null) {
-      downStartLocation = character!.downWord!.location;
-    }
-
-    // Check across direction alternatives
-    if (acrossStartLocation != null) {
-      final acrossAlternates = puzzle.alternateWords[acrossStartLocation]?[model.Direction.across];
-      if (acrossAlternates != null) {
-        possibleWords.addAll(acrossAlternates);
-      }
-      // Add original word
-      final originalAcrossWord = puzzle.crossword.words.firstWhere(
+      final originalWord = puzzle.crossword.words.firstWhere(
         (word) => word.location == acrossStartLocation && word.direction == model.Direction.across,
       );
-      possibleWords.add(originalAcrossWord.word);
+      acrossLength = originalWord.word.length;
     }
-
-    // Check down direction alternatives
-    if (downStartLocation != null) {
-      final downAlternates = puzzle.alternateWords[downStartLocation]?[model.Direction.down];
-      if (downAlternates != null) {
-        possibleWords.addAll(downAlternates);
-      }
-      // Add original word
-      final originalDownWord = puzzle.crossword.words.firstWhere(
+    
+    if (character?.downWord != null) {
+      downStartLocation = character!.downWord!.location;
+      final originalWord = puzzle.crossword.words.firstWhere(
         (word) => word.location == downStartLocation && word.direction == model.Direction.down,
       );
-      possibleWords.add(originalDownWord.word);
+      downLength = originalWord.word.length;
     }
 
-    if (possibleWords.isEmpty) {
+    if (acrossStartLocation == null && downStartLocation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No hay palabras disponibles para esta posición')),
+        const SnackBar(content: Text('No hay palabra en esta posición')),
       );
       return;
     }
 
-    final sortedWords = possibleWords.toList()..sort();
+    // Si hay ambas direcciones, preguntar cuál quiere resolver
+    if (acrossStartLocation != null && downStartLocation != null) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('¿Qué palabra quieres resolver?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.arrow_forward),
+                title: Text('Horizontal ($acrossLength letras)'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _showInputDialog(context, ref, acrossStartLocation!, model.Direction.across, acrossLength!);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.arrow_downward),
+                title: Text('Vertical ($downLength letras)'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _showInputDialog(context, ref, downStartLocation!, model.Direction.down, downLength!);
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    } else if (acrossStartLocation != null) {
+      _showInputDialog(context, ref, acrossStartLocation, model.Direction.across, acrossLength!);
+    } else {
+      _showInputDialog(context, ref, downStartLocation!, model.Direction.down, downLength!);
+    }
+  }
 
+  void _showInputDialog(
+    BuildContext context,
+    WidgetRef ref,
+    model.Location startLocation,
+    model.Direction direction,
+    int wordLength,
+  ) {
+    final controller = TextEditingController();
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Seleccionar Palabra (${sortedWords.length} opciones)'),
-        content: SizedBox(
-          width: double.maxFinite,
-          height: sortedWords.length > 5 ? 300 : null,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: sortedWords.length,
-            itemBuilder: (context, index) {
-              final word = sortedWords[index];
-              // Verificar si la palabra ya está seleccionada
-              final isAlreadySelected = puzzle.selectedWords.any((w) => w.word == word);
-              
-              return ListTile(
-                leading: isAlreadySelected 
-                  ? const Icon(Icons.check_circle, color: Colors.green)
-                  : const Icon(Icons.radio_button_unchecked),
-                title: Text(
-                  word.toUpperCase(),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: isAlreadySelected ? Colors.green : null,
-                  ),
-                ),
-                subtitle: Text('${word.length} letras'),
-                onTap: () {
+        title: Row(
+          children: [
+            Icon(
+              direction == model.Direction.across ? Icons.arrow_forward : Icons.arrow_downward,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text('${direction == model.Direction.across ? "Horizontal" : "Vertical"} - $wordLength letras'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Escribe la palabra:',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              textCapitalization: TextCapitalization.characters,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 2),
+              decoration: InputDecoration(
+                hintText: '_ ' * wordLength,
+                border: const OutlineInputBorder(),
+                counterText: '',
+                prefixIcon: const Icon(Icons.edit),
+              ),
+              maxLength: wordLength,
+              onSubmitted: (value) {
+                if (value.isNotEmpty && value.length == wordLength) {
                   Navigator.of(context).pop();
-                  _trySelectWord(context, ref, location, word);
-                },
-              );
-            },
-          ),
+                  _trySelectWordAtLocation(context, ref, startLocation, direction, value.toLowerCase());
+                }
+              },
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Debe tener exactamente $wordLength letras',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Cancelar'),
           ),
+          ElevatedButton(
+            onPressed: () {
+              final word = controller.text.toLowerCase();
+              if (word.length == wordLength) {
+                Navigator.of(context).pop();
+                _trySelectWordAtLocation(context, ref, startLocation, direction, word);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('La palabra debe tener $wordLength letras')),
+                );
+              }
+            },
+            child: const Text('Intentar'),
+          ),
         ],
       ),
     );
-  }  void _trySelectWord(
+  }
+
+  void _trySelectWordAtLocation(
     BuildContext context,
     WidgetRef ref,
-    model.Location location,
+    model.Location startLocation,
+    model.Direction direction,
     String word,
   ) async {
     final puzzle = ref.read(puzzleProvider);
 
-    // Find the start location of the word at this position
-    model.Location? acrossStartLocation;
-    model.Location? downStartLocation;
-
-    final character = puzzle.crossword.characters[location];
-    if (character?.acrossWord != null) {
-      acrossStartLocation = character!.acrossWord!.location;
-    }
-    if (character?.downWord != null) {
-      downStartLocation = character!.downWord!.location;
-    }
-
-    bool wordWasSelected = false;
-
-    // Try across first if we have an across word
-    if (acrossStartLocation != null) {
-      // Verificar si la palabra es correcta antes de intentar seleccionarla
-      final isCorrect = puzzle.crossword.words.any((w) => 
-        w.location == acrossStartLocation && 
-        w.direction == model.Direction.across && 
-        w.word == word
-      ) || (puzzle.alternateWords[acrossStartLocation]?[model.Direction.across]?.contains(word) == true);
-      
-      if (isCorrect) {
-        await ref.read(puzzleProvider.notifier).selectWord(
-          location: acrossStartLocation,
-          word: word,
-          direction: model.Direction.across,
-        );
-        wordWasSelected = true;
-      }
-    }
-
-    // Try down if we have a down word and word wasn't selected yet
-    if (!wordWasSelected && downStartLocation != null) {
-      // Verificar si la palabra es correcta antes de intentar seleccionarla
-      final isCorrect = puzzle.crossword.words.any((w) => 
-        w.location == downStartLocation && 
-        w.direction == model.Direction.down && 
-        w.word == word
-      ) || (puzzle.alternateWords[downStartLocation]?[model.Direction.down]?.contains(word) == true);
-      
-      if (isCorrect) {
-        await ref.read(puzzleProvider.notifier).selectWord(
-          location: downStartLocation,
-          word: word,
-          direction: model.Direction.down,
-        );
-        wordWasSelected = true;
-      }
-    }
-
-    // Si no se seleccionó la palabra, es incorrecta
-    if (!wordWasSelected && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ "$word" no es la palabra correcta'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 2),
-        ),
+    // Verificar si la palabra es correcta
+    final isCorrect = puzzle.crossword.words.any((w) => 
+      w.location == startLocation && 
+      w.direction == direction && 
+      w.word == word
+    ) || (puzzle.alternateWords[startLocation]?[direction]?.contains(word) == true);
+    
+    // Guardar messenger antes de async
+    final messenger = ScaffoldMessenger.of(context);
+    
+    if (isCorrect) {
+      await ref.read(puzzleProvider.notifier).selectWord(
+        location: startLocation,
+        word: word,
+        direction: direction,
       );
+      
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('✅ ¡Correcto! "${word.toUpperCase()}"'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+    } else {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('❌ "$word" no es correcta'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 

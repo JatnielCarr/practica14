@@ -27,7 +27,9 @@ migrate_working_dir/
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
+.packages
 .pub-cache/
 .pub/
 /build/
@@ -49,8 +51,34 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/.gradle/
+/android/local.properties
+/android/captures/
+/android/gradlew
+/android/gradlew.bat
+/android/gradle/wrapper/gradle-wrapper.jar
 
-# Documentación (mantener solo README.md)
+# iOS/macOS
+/ios/Flutter/flutter_export_environment.sh
+/ios/Flutter/ephemeral/
+/ios/Pods/
+/ios/.symlinks/
+/macos/Flutter/ephemeral/
+/macos/Pods/
+
+# Web
+/web/flutter_service_worker.js
+/web/flutter.js
+/web/main.dart.js
+/web/main.dart.js.map
+
+# Windows
+/windows/flutter/ephemeral/
+
+# Linux
+/linux/flutter/ephemeral/
+
+# Documentación temporal (mantener solo README.md)
 *.md
 !README.md
 SUPABASE_INTEGRATION.md
@@ -59,7 +87,40 @@ MINIGAME_README.md
 RESUMEN_COMPLETO.md
 CONFIGURACION_RAPIDA.md
 CHECKLIST.md
+DOCS.md
+CHANGELOG.md
 
 # ⚠️ IMPORTANTE: Proteger credenciales de Supabase
-# Descomenta la siguiente línea si vas a subir a un repositorio público
+# ⚠️ DESCOMENTA LA SIGUIENTE LÍNEA SI VAS A SUBIR A REPOSITORIO PÚBLICO
 # lib/supabase_config.dart
+
+# Archivos de desarrollo temporal
+*.bak
+*.backup
+*.tmp
+*.temp
+*~
+
+# Logs detallados
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Firebase (si se agrega en el futuro)
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Test coverage
+/test_coverage/
+lcov.info
+
+# Archivos de splash screen generados
+android/app/src/main/res/drawable*/launch_background.xml
+ios/Runner/Assets.xcassets/LaunchImage.imageset/
+ios/Runner/Base.lproj/LaunchScreen.storyboard
