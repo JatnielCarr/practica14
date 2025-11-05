@@ -20,17 +20,23 @@ class _CrosswordPuzzleWidgetState extends ConsumerState<CrosswordPuzzleWidget> {
   bool hasCompletedExclusiveWords = false;
   DateTime? startTime;
   bool isOnline = false;
+  bool _hasInitialized = false; // Bandera para evitar inicialización múltiple
 
   @override
   void initState() {
     super.initState();
-    _initializeGame();
+    if (!_hasInitialized) {
+      _hasInitialized = true;
+      _initializeGame();
+    }
   }
 
   Future<void> _initializeGame() async {
     // Check if we have internet connection
     final exclusiveWords = await SupabaseService.instance.getPalabrasExclusivas();
     final online = exclusiveWords.isNotEmpty;
+    
+    if (!mounted) return; // Verificar que el widget esté montado
     
     setState(() {
       isOnline = online;
@@ -39,9 +45,9 @@ class _CrosswordPuzzleWidgetState extends ConsumerState<CrosswordPuzzleWidget> {
     if (online && mounted) {
       // Ask for username before starting
       final user = await _showInitialLoginDialog();
-      if (user != null) {
+      if (user != null && mounted) {
         final uid = await SupabaseService.instance.loginOrCreateUser(user);
-        if (uid != null) {
+        if (uid != null && mounted) {
           setState(() {
             userId = uid;
             username = user;
@@ -385,7 +391,8 @@ class _CrosswordPuzzleWidgetState extends ConsumerState<CrosswordPuzzleWidget> {
                           ? Theme.of(context).colorScheme.onPrimary
                           : Theme.of(context).colorScheme.primary,
                     ),
-                    child: Text(character.character),
+                    // CRUCIAL: Solo mostrar letra si está en palabra seleccionada
+                    child: Text(isSelected ? character.character : ''),
                   ),
                 ),
               ),
@@ -463,16 +470,30 @@ class _CrosswordPuzzleWidgetState extends ConsumerState<CrosswordPuzzleWidget> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Seleccionar Palabra'),
+        title: Text('Seleccionar Palabra (${sortedWords.length} opciones)'),
         content: SizedBox(
           width: double.maxFinite,
+          height: sortedWords.length > 5 ? 300 : null,
           child: ListView.builder(
             shrinkWrap: true,
             itemCount: sortedWords.length,
             itemBuilder: (context, index) {
               final word = sortedWords[index];
+              // Verificar si la palabra ya está seleccionada
+              final isAlreadySelected = puzzle.selectedWords.any((w) => w.word == word);
+              
               return ListTile(
-                title: Text(word),
+                leading: isAlreadySelected 
+                  ? const Icon(Icons.check_circle, color: Colors.green)
+                  : const Icon(Icons.radio_button_unchecked),
+                title: Text(
+                  word.toUpperCase(),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: isAlreadySelected ? Colors.green : null,
+                  ),
+                ),
+                subtitle: Text('${word.length} letras'),
                 onTap: () {
                   Navigator.of(context).pop();
                   _trySelectWord(context, ref, location, word);
@@ -489,9 +510,7 @@ class _CrosswordPuzzleWidgetState extends ConsumerState<CrosswordPuzzleWidget> {
         ],
       ),
     );
-  }
-
-  void _trySelectWord(
+  }  void _trySelectWord(
     BuildContext context,
     WidgetRef ref,
     model.Location location,
@@ -511,40 +530,56 @@ class _CrosswordPuzzleWidgetState extends ConsumerState<CrosswordPuzzleWidget> {
       downStartLocation = character!.downWord!.location;
     }
 
+    bool wordWasSelected = false;
+
     // Try across first if we have an across word
-    if (acrossStartLocation != null &&
-        puzzle.canSelectWord(
+    if (acrossStartLocation != null) {
+      // Verificar si la palabra es correcta antes de intentar seleccionarla
+      final isCorrect = puzzle.crossword.words.any((w) => 
+        w.location == acrossStartLocation && 
+        w.direction == model.Direction.across && 
+        w.word == word
+      ) || (puzzle.alternateWords[acrossStartLocation]?[model.Direction.across]?.contains(word) == true);
+      
+      if (isCorrect) {
+        await ref.read(puzzleProvider.notifier).selectWord(
           location: acrossStartLocation,
           word: word,
           direction: model.Direction.across,
-        )) {
-      await ref.read(puzzleProvider.notifier).selectWord(
-        location: acrossStartLocation,
-        word: word,
-        direction: model.Direction.across,
-      );
-      return;
+        );
+        wordWasSelected = true;
+      }
     }
 
-    // Try down if we have a down word
-    if (downStartLocation != null &&
-        puzzle.canSelectWord(
+    // Try down if we have a down word and word wasn't selected yet
+    if (!wordWasSelected && downStartLocation != null) {
+      // Verificar si la palabra es correcta antes de intentar seleccionarla
+      final isCorrect = puzzle.crossword.words.any((w) => 
+        w.location == downStartLocation && 
+        w.direction == model.Direction.down && 
+        w.word == word
+      ) || (puzzle.alternateWords[downStartLocation]?[model.Direction.down]?.contains(word) == true);
+      
+      if (isCorrect) {
+        await ref.read(puzzleProvider.notifier).selectWord(
           location: downStartLocation,
           word: word,
           direction: model.Direction.down,
-        )) {
-      await ref.read(puzzleProvider.notifier).selectWord(
-        location: downStartLocation,
-        word: word,
-        direction: model.Direction.down,
-      );
-      return;
+        );
+        wordWasSelected = true;
+      }
     }
 
-    // Word cannot be selected
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('No se puede colocar "$word" en esta posición')),
-    );
+    // Si no se seleccionó la palabra, es incorrecta
+    if (!wordWasSelected && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ "$word" no es la palabra correcta'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   TableSpan _buildSpan(BuildContext context, int index) {

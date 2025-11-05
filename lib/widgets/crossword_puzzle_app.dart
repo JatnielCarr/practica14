@@ -17,15 +17,21 @@ class CrosswordPuzzleApp extends ConsumerStatefulWidget {
 }
 
 class _CrosswordPuzzleAppState extends ConsumerState<CrosswordPuzzleApp> {
+  bool _audioStarted = false;
+
   @override
   void initState() {
     super.initState();
-    // Reproducir música de fondo después de que se construya el primer frame
+    // Reproducir música de fondo después del primer frame
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      try {
-        await widget.audioService?.playBackgroundMusic();
-      } catch (e) {
-        // Silently handle audio errors
+      if (!_audioStarted && mounted) {
+        _audioStarted = true;
+        try {
+          debugPrint('🎵 Intentando reproducir música de fondo...');
+          await widget.audioService?.playBackgroundMusic();
+        } catch (e) {
+          debugPrint('⚠️ Error al reproducir música: $e');
+        }
       }
     });
   }

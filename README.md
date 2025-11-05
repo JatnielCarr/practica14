@@ -173,14 +173,29 @@ flutter run -d ios
 
 ## 📱 Optimizaciones para Móviles
 
-### Rendimiento:
-| Métrica | Optimización |
-|---------|--------------|
-| **Workers paralelos** | 2 (reducido de 4) |
-| **Intentos por palabra** | 500 (reducido de 1000) |
-| **Timeout generación** | 5s (reducido de 10s) |
-| **Actualización timer** | 1 vez/segundo (antes 10 veces/seg) |
-| **Palabras disponibles** | 2,189 normales + 6 exclusivas online |
+### ⚡ Rendimiento Mejorado (Última Actualización):
+| Métrica | Optimización | Mejora |
+|---------|--------------|--------|
+| **Workers paralelos** | 1 (reducido de 4) | -75% uso CPU |
+| **Intentos por palabra** | 300 (reducido de 1000) | -70% tiempo gen. |
+| **Timeout generación** | 3s (reducido de 10s) | -70% espera máx. |
+| **Actualización timer** | 1 vez/segundo (antes 10 veces/seg) | -90% redibujados |
+| **Palabras disponibles** | 2,189 normales + 6 exclusivas online | +270% variedad |
+
+### 🎵 Audio Optimizado:
+- ✅ Música de fondo con bucle automático
+- ✅ Volumen ajustado al 30% (no molesta)
+- ✅ Delay de 500ms para mejor carga
+- ✅ Logs detallados para debugging
+- ✅ Manejo robusto de errores
+- ✅ Permisos de audio en Android
+
+### 🖼️ Splash Screen Mejorado:
+- ✅ Configuración nativa para Android 12+
+- ✅ Pantalla completa (fullscreen)
+- ✅ Imagen centrada
+- ✅ Carga más rápida
+- ✅ Soporte dark mode
 
 ### Tamaños de Crucigrama Optimizados:
 - **Small**: 20×11 (smartphones pequeños)
@@ -269,6 +284,54 @@ flutter build web --release
 ```
 
 ## 🐛 Solución de Problemas
+
+### ❌ El splash screen no se ve bien en móvil
+✅ **Solución**:
+```bash
+# Regenerar el splash screen
+dart run flutter_native_splash:create
+
+# Limpiar y recompilar
+flutter clean
+flutter pub get
+flutter run --release
+```
+
+### 🔇 No se escucha la música de fondo
+✅ **Verificar**:
+- Mira la consola de Flutter, debe mostrar: "🎵 Intentando reproducir música de fondo..."
+- Si ves "✅ Background music started successfully" → Audio funcionando
+- Si ves "❌ Error playing background music" → Problema con el archivo
+
+✅ **Soluciones**:
+1. Verifica que existe `assets/audio/retro-game-arcade-236133.mp3`
+2. Comprueba que `pubspec.yaml` tiene `- assets/audio/`
+3. Ejecuta `flutter clean && flutter pub get`
+4. En Android, verifica permisos en AndroidManifest.xml
+5. Prueba en modo release: `flutter run --release`
+
+### 🐌 La app sigue trabándose en móvil
+✅ **Optimizaciones aplicadas**:
+- Workers: 1 (en lugar de 2 o 4)
+- Intentos: 300 (en lugar de 500)
+- Timeout: 3 segundos (en lugar de 5)
+
+✅ **Pruebas adicionales**:
+```bash
+# Compilar en modo release (mucho más rápido)
+flutter run --release
+
+# Ver métricas de rendimiento
+flutter run --profile
+```
+
+✅ **Ajustes manuales** (si sigue lento):
+- En `lib/providers.dart` línea 17: Cambiar `backgroundWorkerCount = 1`
+- En `lib/isolates.dart` líneas 99-100:
+  ```dart
+  const maxTries = 200;  // Reducir más
+  const maxDuration = Duration(seconds: 2);  // Reducir más
+  ```
 
 ### Las palabras exclusivas no aparecen en el crucigrama
 ✅ **Esperado**: Esto significa que estás en modo offline

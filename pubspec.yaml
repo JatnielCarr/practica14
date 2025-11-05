@@ -9,7 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  audioplayers: ^6.1.0
+  just_audio: ^0.9.42
   built_collection: ^5.1.1
   built_value: ^8.10.1
   characters: ^1.4.0
@@ -52,3 +52,14 @@ flutter_native_splash:
   image: assets/images/splash_image.png
   android: true
   ios: true
+  web: false
+  
+  # Configuración adicional para Android
+  android_12:
+    image: assets/images/splash_image.png
+    color: "#42A5F5"
+  
+  # Duración del splash (en milisegundos)
+  android_gravity: center
+  ios_content_mode: center
+  fullscreen: true

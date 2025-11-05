@@ -9,19 +9,27 @@ import 'widgets/crossword_puzzle_app.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  debugPrint('🚀 Inicializando aplicación...');
+
   // Inicializar Supabase
-  await Supabase.initialize(
-    url: SupabaseConfig.supabaseUrl,
-    anonKey: SupabaseConfig.supabaseAnonKey,
-  );
+  try {
+    await Supabase.initialize(
+      url: SupabaseConfig.supabaseUrl,
+      anonKey: SupabaseConfig.supabaseAnonKey,
+    );
+    debugPrint('✅ Supabase initialized');
+  } catch (e) {
+    debugPrint('❌ Error initializing Supabase: $e');
+  }
 
   // Inicializar el servicio de audio (opcional)
   AudioService? audioService;
   try {
+    debugPrint('🎵 Inicializando servicio de audio...');
     audioService = AudioService();
     await audioService.initialize();
   } catch (e) {
-    // Si hay problemas con el audio, continuar sin él
+    debugPrint('⚠️ Audio no disponible (continuando sin audio): $e');
     audioService = null;
   }
 

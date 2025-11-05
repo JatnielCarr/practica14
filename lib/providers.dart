@@ -14,7 +14,7 @@ import 'supabase_service.dart';
 part 'providers.g.dart';
 
 // OPTIMIZACIÓN: Reducir workers para mejor rendimiento en móviles
-const backgroundWorkerCount = 2; // Reducido de 4 para móviles
+const backgroundWorkerCount = 1; // Reducido a 1 para móviles (más estable)
 
 /// Provider for exclusive words from Supabase (only when online)
 @riverpod

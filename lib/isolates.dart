@@ -96,8 +96,8 @@ Future<WorkQueue> _generate((WorkQueue, int) workMessage) async {
   final wordsList = candidateWords.where((word) => word.contains(targetChar)).toList()..shuffle();
   
   // OPTIMIZACIÓN: Reducir límites para mejor rendimiento en móviles
-  const maxTries = 500; // Reducido de 1000
-  const maxDuration = Duration(seconds: 5); // Reducido de 10
+  const maxTries = 300; // Reducido para mejor rendimiento
+  const maxDuration = Duration(seconds: 3); // Reducido para evitar trabas
   
   int tryCount = 0;
   final start = DateTime.now();

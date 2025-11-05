@@ -1,4 +1,5 @@
-import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
+import 'package:just_audio/just_audio.dart';
 
 class AudioService {
   static final AudioService _instance = AudioService._internal();
@@ -14,23 +15,31 @@ class AudioService {
     if (_isInitialized) return;
 
     try {
-      await _backgroundPlayer.setReleaseMode(ReleaseMode.loop);
-      await _backgroundPlayer.setVolume(0.2); // Volumen más bajo
+      await _backgroundPlayer.setLoopMode(LoopMode.one);
+      await _backgroundPlayer.setVolume(0.3);
       _isInitialized = true;
+      debugPrint('✅ AudioService initialized successfully');
     } catch (e) {
-      // Silently handle initialization errors
+      debugPrint('❌ Error initializing AudioService: $e');
     }
   }
 
   Future<void> playBackgroundMusic() async {
-    if (_isPlaying) return;
+    if (_isPlaying) {
+      debugPrint('⚠️ Music is already playing');
+      return;
+    }
 
     try {
       await initialize();
-      await _backgroundPlayer.play(AssetSource('audio/retro-game-arcade-236133.mp3'));
+      debugPrint('🎵 Attempting to play background music...');
+      await _backgroundPlayer.setAsset('assets/audio/retro-game-arcade-236133.mp3');
+      await _backgroundPlayer.play();
       _isPlaying = true;
+      debugPrint('✅ Background music started successfully');
     } catch (e) {
-      // Silently handle playback errors
+      debugPrint('❌ Error playing background music: $e');
+      debugPrint('Stack trace: ${StackTrace.current}');
     }
   }
 
@@ -38,8 +47,9 @@ class AudioService {
     try {
       await _backgroundPlayer.stop();
       _isPlaying = false;
+      debugPrint('⏹️ Background music stopped');
     } catch (e) {
-      // Silently handle stop errors
+      debugPrint('❌ Error stopping background music: $e');
     }
   }
 
@@ -47,21 +57,24 @@ class AudioService {
     try {
       await _backgroundPlayer.pause();
       _isPlaying = false;
+      debugPrint('⏸️ Background music paused');
     } catch (e) {
-      // Silently handle pause errors
+      debugPrint('❌ Error pausing background music: $e');
     }
   }
 
   Future<void> resumeBackgroundMusic() async {
     try {
-      await _backgroundPlayer.resume();
+      await _backgroundPlayer.play();
       _isPlaying = true;
+      debugPrint('▶️ Background music resumed');
     } catch (e) {
-      // Silently handle resume errors
+      debugPrint('❌ Error resuming background music: $e');
     }
   }
 
   void dispose() {
     _backgroundPlayer.dispose();
+    debugPrint('🗑️ AudioService disposed');
   }
 }
