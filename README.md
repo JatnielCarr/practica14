@@ -331,6 +331,47 @@ flutter pub get
 flutter run --release
 ```
 
+### 🔌 Los usuarios NO se registran en la base de datos
+
+**SÍNTOMA:** Ingresas tu nombre pero no apareces en la tabla `usuarios` de Supabase.
+
+✅ **Diagnóstico rápido:**
+
+1. **Revisa los logs de Flutter** (deberías ver):
+   ```
+   ✅ Supabase initialized
+   🎮 Inicializando juego...
+   📚 Intentando obtener palabras exclusivas...
+   🔐 Intentando login/registro para usuario: [tu_nombre]
+   ✅ Usuario creado exitosamente con ID: [uuid]
+   ```
+
+2. **Si ves errores sobre "row-level security policy":**
+   - Ve a Supabase Dashboard → SQL Editor
+   - Ejecuta:
+   ```sql
+   ALTER TABLE usuarios DISABLE ROW LEVEL SECURITY;
+   ALTER TABLE ranking DISABLE ROW LEVEL SECURITY;
+   ```
+
+3. **Si ves "Invalid API key" o errores de conexión:**
+   - Verifica `lib/supabase_config.dart`
+   - Copia la **anon/public key** correcta desde Supabase Dashboard → Settings → API
+
+4. **Si no ves ningún log:**
+   - Ejecuta: `flutter run --debug` (no --release)
+   - Abre Flutter DevTools para ver logs completos
+
+5. **Si falla en móvil pero funciona en PC:**
+   - Verifica permisos de internet en `android/app/src/main/AndroidManifest.xml`:
+   ```xml
+   <uses-permission android:name="android.permission.INTERNET"/>
+   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+   ```
+   - Verifica que el celular tenga WiFi o datos móviles activos
+
+**📖 Guía completa:** Ve a `TROUBLESHOOTING_SUPABASE.md` para diagnóstico paso a paso.
+
 ### 🔇 No se escucha la música de fondo
 ✅ **Verificar**:
 - Mira la consola de Flutter, debe mostrar: "🎵 Intentando reproducir música de fondo..."

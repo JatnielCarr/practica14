@@ -10,20 +10,53 @@ class SupabaseService {
 
   final _supabase = Supabase.instance.client;
 
+  /// Verificar si la conexión a Supabase está funcionando
+  Future<bool> testConnection() async {
+    try {
+      debugPrint('🔌 Probando conexión a Supabase...');
+      
+      // Intentar una consulta simple para verificar conectividad
+      await _supabase
+          .from('palabras_exclusivas')
+          .select('palabra')
+          .limit(1)
+          .timeout(const Duration(seconds: 5));
+      
+      debugPrint('✅ Conexión a Supabase exitosa');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Fallo en conexión a Supabase: $e');
+      return false;
+    }
+  }
+
   /// Obtener todas las palabras exclusivas desde Supabase
   Future<List<String>> getPalabrasExclusivas() async {
     try {
+      debugPrint('📚 Intentando obtener palabras exclusivas...');
+      
       final response = await _supabase
           .from('palabras_exclusivas')
-          .select('palabra');
+          .select('palabra')
+          .timeout(
+            const Duration(seconds: 5),
+            onTimeout: () {
+              debugPrint('⏱️ Timeout al obtener palabras exclusivas');
+              throw Exception('Timeout al conectar con Supabase');
+            },
+          );
       
-      return (response as List)
+      final palabras = (response as List)
           .where((item) => item != null && item['palabra'] != null)
           .map((item) => (item['palabra'] as String).toLowerCase().trim())
           .where((word) => word.isNotEmpty)
           .toList();
-    } catch (e) {
-      debugPrint('Error al obtener palabras exclusivas: $e');
+      
+      debugPrint('✅ Obtenidas ${palabras.length} palabras exclusivas');
+      return palabras;
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error al obtener palabras exclusivas: $e');
+      debugPrint('📋 Stack trace: $stackTrace');
       return [];
     }
   }
@@ -31,7 +64,10 @@ class SupabaseService {
   /// Buscar o crear usuario
   Future<String?> loginOrCreateUser(String username) async {
     try {
+      debugPrint('🔐 Intentando login/registro para usuario: $username');
+      
       // Buscar usuario existente
+      debugPrint('🔍 Buscando usuario existente...');
       final existingUser = await _supabase
           .from('usuarios')
           .select('id')
@@ -39,19 +75,34 @@ class SupabaseService {
           .maybeSingle();
 
       if (existingUser != null) {
-        return existingUser['id'] as String;
+        final userId = existingUser['id'] as String;
+        debugPrint('✅ Usuario encontrado con ID: $userId');
+        return userId;
       }
 
       // Crear nuevo usuario
+      debugPrint('➕ Usuario no existe, creando nuevo...');
       final newUser = await _supabase
           .from('usuarios')
           .insert({'username': username})
           .select('id')
           .single();
 
-      return newUser['id'] as String;
-    } catch (e) {
-      debugPrint('Error en login/registro: $e');
+      final newUserId = newUser['id'] as String;
+      debugPrint('✅ Usuario creado exitosamente con ID: $newUserId');
+      return newUserId;
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error en login/registro: $e');
+      debugPrint('📋 Stack trace: $stackTrace');
+      
+      // Intentar obtener más detalles del error
+      if (e is PostgrestException) {
+        debugPrint('⚠️ Error de Postgres: ${e.message}');
+        debugPrint('⚠️ Código: ${e.code}');
+        debugPrint('⚠️ Detalles: ${e.details}');
+        debugPrint('⚠️ Hint: ${e.hint}');
+      }
+      
       return null;
     }
   }
@@ -59,13 +110,23 @@ class SupabaseService {
   /// Registrar tiempo completado (en milisegundos)
   Future<void> registrarTiempo(String userId, int tiempoEnMilisegundos) async {
     try {
+      debugPrint('⏱️ Registrando tiempo para usuario $userId: ${tiempoEnMilisegundos}ms');
+      
       await _supabase.from('ranking').insert({
         'user_id': userId,
         'tiempo_en_milisegundos': tiempoEnMilisegundos,
         'fecha_completado': DateTime.now().toIso8601String(),
       });
-    } catch (e) {
-      debugPrint('Error al registrar tiempo: $e');
+      
+      debugPrint('✅ Tiempo registrado exitosamente');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error al registrar tiempo: $e');
+      debugPrint('📋 Stack trace: $stackTrace');
+      
+      if (e is PostgrestException) {
+        debugPrint('⚠️ Error de Postgres: ${e.message}');
+        debugPrint('⚠️ Código: ${e.code}');
+      }
     }
   }
 

@@ -78,9 +78,10 @@ app.*.map.json
 # Linux
 /linux/flutter/ephemeral/
 
-# Documentación temporal (mantener solo README.md)
+# Documentación temporal (mantener solo README.md y TROUBLESHOOTING)
 *.md
 !README.md
+!TROUBLESHOOTING_SUPABASE.md
 SUPABASE_INTEGRATION.md
 OPTIMIZACIONES.md
 MINIGAME_README.md

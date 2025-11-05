@@ -32,9 +32,14 @@ class _CrosswordPuzzleWidgetState extends ConsumerState<CrosswordPuzzleWidget> {
   }
 
   Future<void> _initializeGame() async {
+    debugPrint('🎮 Inicializando juego...');
+    
     // Check if we have internet connection
     final exclusiveWords = await SupabaseService.instance.getPalabrasExclusivas();
     final online = exclusiveWords.isNotEmpty;
+    
+    debugPrint('🌐 Estado: ${online ? "ONLINE" : "OFFLINE"}');
+    debugPrint('📚 Palabras exclusivas encontradas: ${exclusiveWords.length}');
     
     if (!mounted) return; // Verificar que el widget esté montado
     
@@ -46,13 +51,55 @@ class _CrosswordPuzzleWidgetState extends ConsumerState<CrosswordPuzzleWidget> {
       // Ask for username before starting
       final user = await _showInitialLoginDialog();
       if (user != null && mounted) {
+        debugPrint('👤 Usuario ingresado: $user');
+        
+        // Mostrar indicador de carga
+        if (mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => const Center(
+              child: Card(
+                child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('Conectando con servidor...'),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+        
         final uid = await SupabaseService.instance.loginOrCreateUser(user);
+        
+        // Cerrar diálogo de carga
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
+        
         if (uid != null && mounted) {
+          debugPrint('✅ Login exitoso, ID: $uid');
           setState(() {
             userId = uid;
             username = user;
             startTime = DateTime.now(); // Start timer
           });
+        } else if (mounted) {
+          debugPrint('❌ Login falló');
+          // Mostrar error
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Error al conectar. Verifica tu conexión a internet.'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 5),
+            ),
+          );
         }
       }
     }

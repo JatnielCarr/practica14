@@ -42,12 +42,53 @@ ALTER TABLE palabras_exclusivas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE usuarios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ranking ENABLE ROW LEVEL SECURITY;
 
--- Políticas de acceso (permitir todo por simplicidad)
+-- Políticas de acceso (permitir lectura y escritura pública por simplicidad)
+-- IMPORTANTE: Eliminar políticas existentes primero
 DROP POLICY IF EXISTS "Allow all on palabras_exclusivas" ON palabras_exclusivas;
 DROP POLICY IF EXISTS "Allow all on usuarios" ON usuarios;
 DROP POLICY IF EXISTS "Allow all on ranking" ON ranking;
 
-CREATE POLICY "Allow all on palabras_exclusivas" ON palabras_exclusivas FOR ALL USING (true);
-CREATE POLICY "Allow all on usuarios" ON usuarios FOR ALL USING (true);
-CREATE POLICY "Allow all on ranking" ON ranking FOR ALL USING (true);
+DROP POLICY IF EXISTS "Enable read for palabras_exclusivas" ON palabras_exclusivas;
+DROP POLICY IF EXISTS "Enable read for usuarios" ON usuarios;
+DROP POLICY IF EXISTS "Enable read for ranking" ON ranking;
+DROP POLICY IF EXISTS "Enable insert for usuarios" ON usuarios;
+DROP POLICY IF EXISTS "Enable insert for ranking" ON ranking;
+
+-- Crear políticas más específicas
+-- Palabras exclusivas: Solo lectura
+CREATE POLICY "Enable read for palabras_exclusivas" ON palabras_exclusivas 
+    FOR SELECT USING (true);
+
+-- Usuarios: Lectura y creación
+CREATE POLICY "Enable read for usuarios" ON usuarios 
+    FOR SELECT USING (true);
+
+CREATE POLICY "Enable insert for usuarios" ON usuarios 
+    FOR INSERT WITH CHECK (true);
+
+-- Ranking: Lectura y creación
+CREATE POLICY "Enable read for ranking" ON ranking 
+    FOR SELECT USING (true);
+
+CREATE POLICY "Enable insert for ranking" ON ranking 
+    FOR INSERT WITH CHECK (true);
+
+-- ALTERNATIVA SI LAS POLÍTICAS ESPECÍFICAS NO FUNCIONAN:
+-- Descomentar las siguientes líneas y comentar las políticas específicas arriba
+
+-- DROP POLICY IF EXISTS "Enable read for palabras_exclusivas" ON palabras_exclusivas;
+-- DROP POLICY IF EXISTS "Enable read for usuarios" ON usuarios;
+-- DROP POLICY IF EXISTS "Enable read for ranking" ON ranking;
+-- DROP POLICY IF EXISTS "Enable insert for usuarios" ON usuarios;
+-- DROP POLICY IF EXISTS "Enable insert for ranking" ON ranking;
+
+-- CREATE POLICY "Allow all on palabras_exclusivas" ON palabras_exclusivas FOR ALL USING (true) WITH CHECK (true);
+-- CREATE POLICY "Allow all on usuarios" ON usuarios FOR ALL USING (true) WITH CHECK (true);
+-- CREATE POLICY "Allow all on ranking" ON ranking FOR ALL USING (true) WITH CHECK (true);
+
+-- Verificar que las políticas se crearon correctamente
+-- Ejecuta esto después para verificar:
+-- SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check 
+-- FROM pg_policies 
+-- WHERE tablename IN ('palabras_exclusivas', 'usuarios', 'ranking');
 
